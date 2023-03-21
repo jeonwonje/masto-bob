@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Trainer Registration</title>
+    <style>
+      * {
+        margin: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Register a new Group</h1>
+    <h3>Create a class here</h3>
+    <form method="POST" action="/register-group">
+      <label for="groupName">Group Name:</label>
+      <input type="text" name="groupName" id="" />
+      <br />
+      <label for="names">Usernames:</label>
+      <select id="names">
+        <% usernames.forEach(element => { %>
+        <option value="<%= element %>"><%= element %></option>
+        <% }) %>
+      </select>
+      <button type="button" onclick="addName()">+</button>
+      <ul id="selectedNames"></ul>
+
+      <input type="hidden" name="names" id="hiddenField" />
+
+      <button type="submit">Register</button>
+    </form>
+
+    <script>
+      let selectedNames = []; // contains list of selected names for our group
+
+      const selectElement = document.querySelector('#names');
+
+      function addName() {
+        const select = document.getElementById('names');
+        const selectedName = select.value;
+        let hiddenField = document.getElementById('hiddenField');
+
+        if (!selectedNames.includes(selectedName)) {
+          selectedNames.push(selectedName);
+          hiddenField.value = selectedNames.join(','); // join selected names with comma
+
+          select.options[select.selectedIndex].disabled = true;
+          const selectedNamesList = document.getElementById('selectedNames');
+
+          const li = document.createElement('li');
+          li.textContent = selectedName;
+          selectedNamesList.appendChild(li);
+
+          const removeButton = document.createElement('button');
+          removeButton.textContent = '-';
+
+          removeButton.onclick = () => {
+            selectedNames.splice(selectedNames.indexOf(selectedName), 1);
+            selectedNames.splice(selectedNames.indexOf(selectedName), 1);
+            const option = select.querySelector(
+              `option[value="${selectedName}"]`
+            );
+            option.disabled = false; // re-enable the previously disabled option
+            selectedNamesList.removeChild(li);
+            selectedNamesList.removeChild(removeButton);
+            hiddenField.value = selectedNames.join(','); // update hidden field with updated selected names
+          };
+          selectedNamesList.appendChild(removeButton);
+        }
+      }
+    </script>
+
+    <a href="http://"></a>
+  </body>
+</html>

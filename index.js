@@ -3,9 +3,11 @@ import session from 'express-session';
 import Mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
-import * as dotenv from 'dotenv'
+import * as dotenv from 'dotenv';
 
-import { login } from 'masto';
+import { login } from 'masto'; 
+
+dotenv.config();
 
 const masto = await login({
   url: 'https://tinkertofu.com',
@@ -15,8 +17,6 @@ const masto = await login({
 const app = express();
 const port = 3000;
 const sessionKey = randomBytes(32).toString('hex');
-
-dotenv.config()
 
 app.set('view engine', 'ejs');
 
@@ -31,13 +31,10 @@ app.use(
 );
 
 // dbPasword is in env var for now...
-Mongoose.connect(
-  process.env.DB_STRING,
-  {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  }
-)
+Mongoose.connect(process.env.DB_STRING, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
   .then(() => {
     console.log('Connected to mongodb');
   })
@@ -55,7 +52,18 @@ const trainerSchema = new Mongoose.Schema(
   { collection: 'trainers' }
 );
 
+const groupSchema = new Mongoose.Schema(
+  {
+    groupName: { type: String, unique: true, required: true },
+    trainerList: { type: [String] }, // List of trainer IDs that have access to the group
+    studentList: { type: [String] }, // List of student IDs that are part of this group
+    assignmentList: { type: [String] },
+  },
+  { collection: 'groups' }
+);
+
 const Trainer = Mongoose.model('Trainer', trainerSchema);
+const Group = Mongoose.model('Group', groupSchema);
 
 app.get('/', (req, res) => {
   res.send("Welcome to tinkertofu's submission tracker.");
@@ -63,6 +71,46 @@ app.get('/', (req, res) => {
 
 app.get('/register', (req, res) => {
   res.render('register');
+});
+
+app.get('/register-group', async (req, res) => {
+  const allGroups = await Group.find();
+  const accountsList = await masto.v1.admin.accounts.list();
+  const usernames = accountsList.map((account) => account.username);
+
+  res.render('register-group', { usernames });
+});
+
+app.post('/register-group', async (req, res) => {
+  const { groupName, names } = req.body; // groupName is the user inputted groupName
+  // names is a comma separated string of usernmaes to add.
+
+  console.log(groupName);
+  console.log(names);
+
+  const existingName = await Group.findOne({ groupName });
+  if (existingName) {
+    return res.status(400).send('This class already exists');
+  } else {
+    const trainerList = [];
+    const studentNameList = students.split(' ');
+    let studentList = [];
+
+    for (const i of studentNameList) {
+      studentList.push(await getUserID(i));
+    }
+
+    const assignmentList = [];
+    const newGroup = new Group({
+      groupName: name,
+      trainerList,
+      studentList, // This contains our array of student IDs that belong in this group
+      assignmentList,
+    });
+    await newGroup.save();
+    res.status(200).send('Group registered successfully');
+  }
+  //console.log(groupName, students);*/
 });
 
 app.post('/register', async (req, res) => {
@@ -129,8 +177,7 @@ app.get('/dashboard', async (req, res) => {
     return res.status(400).send('Invalid trainer');
   }
 
-  const data = ['hello', 'metoo'];
-  res.render('dashboard', { trainer, data });
+  res.render('dashboard', { trainer });
 });
 
 app.get('/logout', (req, res) => {
@@ -141,6 +188,16 @@ app.get('/logout', (req, res) => {
     res.redirect('/');
   });
 });
+
+async function getUserID(username) {
+  // params: string, username
+  return (await masto.v1.accounts.search({ q: username }))[0].id;
+}
+
+async function getUserName(userID) {
+  // params: string, userID
+  return (await masto.v1.accounts.fetch(userID)).username;
+}
 
 app.listen(port, () => {
   console.log(`example app listening on ${port}`);
