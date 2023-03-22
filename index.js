@@ -5,7 +5,7 @@ import bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import * as dotenv from 'dotenv';
 
-import { login } from 'masto'; 
+import { login } from 'masto';
 
 dotenv.config();
 
@@ -48,6 +48,7 @@ const trainerSchema = new Mongoose.Schema(
     password: { type: String, required: true },
     name: { type: String, required: true },
     apikey: { type: String, required: true },
+    groups: { type: [String] }, // Store the name of groups that the trainer is in charge of
   },
   { collection: 'trainers' }
 );
@@ -55,7 +56,6 @@ const trainerSchema = new Mongoose.Schema(
 const groupSchema = new Mongoose.Schema(
   {
     groupName: { type: String, unique: true, required: true },
-    trainerList: { type: [String] }, // List of trainer IDs that have access to the group
     studentList: { type: [String] }, // List of student IDs that are part of this group
     assignmentList: { type: [String] },
   },
@@ -92,18 +92,17 @@ app.post('/register-group', async (req, res) => {
   if (existingName) {
     return res.status(400).send('This class already exists');
   } else {
-    const trainerList = [];
-    const studentNameList = students.split(' ');
+    const studentNameList = names.split(',');
     let studentList = [];
 
     for (const i of studentNameList) {
       studentList.push(await getUserID(i));
     }
+    console.log(studentList);
 
     const assignmentList = [];
     const newGroup = new Group({
-      groupName: name,
-      trainerList,
+      groupName,
       studentList, // This contains our array of student IDs that belong in this group
       assignmentList,
     });
