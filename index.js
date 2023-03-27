@@ -85,9 +85,6 @@ app.post('/register-group', async (req, res) => {
   const { groupName, names } = req.body; // groupName is the user inputted groupName
   // names is a comma separated string of usernmaes to add.
 
-  console.log(groupName);
-  console.log(names);
-
   const existingName = await Group.findOne({ groupName });
   if (existingName) {
     return res.status(400).send('This class already exists');
@@ -98,7 +95,6 @@ app.post('/register-group', async (req, res) => {
     for (const i of studentNameList) {
       studentList.push(await getUserID(i));
     }
-    console.log(studentList);
 
     const assignmentList = [];
     const newGroup = new Group({
